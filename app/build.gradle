@@ -11,18 +11,10 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
-    def CURRENCY_LAYER_API_KEY = '"' + CurrencylayerApiKey + '"' ?: '"Add your own API key"';
-
     buildTypes {
-        debug {
-            buildConfigField 'String', "CURRENCYLAYER_API_KEY", CURRENCY_LAYER_API_KEY
-            resValue 'string', "currencylayer_api_key", CURRENCY_LAYER_API_KEY
-        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField 'String', "CURRENCYLAYER_API_KEY", CURRENCY_LAYER_API_KEY
-            resValue 'string', "currencylayer_api_key", CURRENCY_LAYER_API_KEY
         }
     }
 

@@ -1,10 +1,10 @@
 package io.github.akueisara.currencyconversion.api;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
+import android.content.Context;
+
 
 import io.github.akueisara.currencyconversion.BuildConfig;
-import io.github.akueisara.currencyconversion.api.model.CurrencyLayerApiError.CurrencyLayerErrorResponse;
+import io.github.akueisara.currencyconversion.R;
 import io.github.akueisara.currencyconversion.api.model.SupportedCurrencies;
 import io.github.akueisara.currencyconversion.api.model.ExchangeRates;
 import io.reactivex.Observable;
@@ -12,10 +12,7 @@ import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
-import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Converter;
-import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -69,36 +66,22 @@ public final class CurrencyLayerApiManager {
     }
 
 
-    public void getExchangeRateData(String source, Observer<ExchangeRates> observer) {
+    public void getExchangeRateData(Context context, String source, Observer<ExchangeRates> observer) {
         Observable<ExchangeRates> observable;
         if(source.equals(API_DEFAULT_CURRENCY)) {
-            observable = mCurrencyLayerApiService.getDefaultExchangeRatesData(BuildConfig.CURRENCYLAYER_API_KEY);
+            observable = mCurrencyLayerApiService.getDefaultExchangeRatesData(context.getString(R.string.currencylayer_api_key));
         } else {
-            observable = mCurrencyLayerApiService.getExchangeRateData(BuildConfig.CURRENCYLAYER_API_KEY, source);
+            observable = mCurrencyLayerApiService.getExchangeRateData(context.getString(R.string.currencylayer_api_key), source);
         }
         observable.subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(observer);
     }
 
-    public void getCurrencyList(Observer<SupportedCurrencies> observer) {
-        mCurrencyLayerApiService.getSupportedCurrencies(BuildConfig.CURRENCYLAYER_API_KEY)
+    public void getCurrencyList(Context context, Observer<SupportedCurrencies> observer) {
+        mCurrencyLayerApiService.getSupportedCurrencies(context.getString(R.string.currencylayer_api_key))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(observer);
-    }
-
-    public CurrencyLayerErrorResponse parseCurrencyLayerErrorResponse(Response<?> response) {
-        Converter<ResponseBody, CurrencyLayerErrorResponse> converter = mRetrofit.build().responseBodyConverter(CurrencyLayerErrorResponse.class, new Annotation[0]);
-
-        CurrencyLayerErrorResponse error;
-
-        try {
-            error = converter.convert(response.errorBody());
-        } catch (IOException e) {
-            return new CurrencyLayerErrorResponse();
-        }
-
-        return error;
     }
 }

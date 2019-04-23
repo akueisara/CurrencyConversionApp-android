@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void getSupportedCurrenciesApiRequest() {
-        CurrencyLayerApiManager.getInstance().getCurrencyList(new Observer<SupportedCurrencies>() {
+        CurrencyLayerApiManager.getInstance().getCurrencyList(this, new Observer<SupportedCurrencies>() {
             @Override
             public void onSubscribe(Disposable d) {
                 Timber.d("Disposable");
@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void getExchangeRateBaseOnCurrencyApiRequest(String source) {
-        CurrencyLayerApiManager.getInstance().getExchangeRateData(source, new Observer<ExchangeRates>() {
+        CurrencyLayerApiManager.getInstance().getExchangeRateData(this, source, new Observer<ExchangeRates>() {
             @Override
             public void onSubscribe(Disposable d) {
 

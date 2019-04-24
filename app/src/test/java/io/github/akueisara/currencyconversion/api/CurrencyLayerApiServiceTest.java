@@ -1,6 +1,8 @@
 package io.github.akueisara.currencyconversion.api;
 
 import android.arch.core.executor.testing.InstantTaskExecutorRule;
+import android.content.Context;
+import android.content.res.Resources;
 import android.support.annotation.NonNull;
 
 import org.junit.After;
@@ -11,6 +13,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +25,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import io.github.akueisara.currencyconversion.BuildConfig;
+import io.github.akueisara.currencyconversion.MainActivity;
+import io.github.akueisara.currencyconversion.R;
 import io.github.akueisara.currencyconversion.api.model.ExchangeRates;
 import io.github.akueisara.currencyconversion.api.model.SupportedCurrencies;
 import io.reactivex.Scheduler;
@@ -41,6 +47,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by Kuei on 2019-04-22.
@@ -79,7 +88,8 @@ public class CurrencyLayerApiServiceTest {
     }
 
     @Before
-    public  void createService() {
+    public  void setup() {
+        MockitoAnnotations.initMocks(this);
         mMockWebServer = new MockWebServer();
         mService = new Retrofit.Builder()
                 .baseUrl(mMockWebServer.url("/"))
@@ -90,19 +100,15 @@ public class CurrencyLayerApiServiceTest {
     }
 
     @After
-    public  void stopService() throws IOException {
+    public void stop() throws IOException {
         mMockWebServer.shutdown();
     }
 
     @Test
     public void getSupportedCurrenciesTest() throws IOException, InterruptedException {
         enqueueResponse("currency_list.json");
-        RecordedRequest request = mMockWebServer.takeRequest();
-        assertThat(request.getPath(), is("/list?access_key=" + BuildConfig.CURRENCYLAYER_API_KEY));
 
-        TestObserver<SupportedCurrencies> observer = mService.getSupportedCurrencies(BuildConfig.CURRENCYLAYER_API_KEY)
-                .test();
-
+        TestObserver<SupportedCurrencies> observer = mService.getSupportedCurrencies(CurrencyLayerApiManager.API_KEY).test();
         observer.assertValueCount(1);
         assertThat(observer.values().get(0), notNullValue());
         SupportedCurrencies supportedCurrencies = observer.values().get(0);
@@ -111,15 +117,16 @@ public class CurrencyLayerApiServiceTest {
         assertThat(supportedCurrencies.getPrivacy(), is("https://currencylayer.com/privacy"));
         assertThat(supportedCurrencies.getSupportedCurrencyList().get(0).getShortName(), is("AED"));
         assertThat(supportedCurrencies.getSupportedCurrencyList().get(supportedCurrencies.getSupportedCurrencyList().size()-1).getCompleteName(), is("Zimbabwean Dollar"));
+
+        RecordedRequest request = mMockWebServer.takeRequest();
+        assertThat(request.getPath(), is("/list?access_key=" + CurrencyLayerApiManager.API_KEY));
     }
 
     @Test
     public void getDefaultExchangeRatesTest() throws IOException, InterruptedException {
         enqueueResponse("default_exchange_rates.json");
-        RecordedRequest request = mMockWebServer.takeRequest();
-        assertThat(request.getPath(), is("/live?access_key=" + BuildConfig.CURRENCYLAYER_API_KEY));
-        TestObserver<ExchangeRates> observer = mService.getDefaultExchangeRatesData(BuildConfig.CURRENCYLAYER_API_KEY).test();
 
+        TestObserver<ExchangeRates> observer = mService.getDefaultExchangeRatesData(CurrencyLayerApiManager.API_KEY).test();
         observer.assertValueCount(1);
         assertThat(observer.values().get(0), notNullValue());
         ExchangeRates exchangeRates = observer.values().get(0);
@@ -136,6 +143,8 @@ public class CurrencyLayerApiServiceTest {
             assertThat(pair.getValue(), is(3.673097));
         }
 
+        RecordedRequest request = mMockWebServer.takeRequest();
+        assertThat(request.getPath(), is("/live?access_key=" + CurrencyLayerApiManager.API_KEY));
     }
 
     private  void enqueueResponse(String fileName) throws IOException {

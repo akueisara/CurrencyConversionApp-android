@@ -2,9 +2,7 @@ package io.github.akueisara.currencyconversion.api;
 
 import android.content.Context;
 
-
 import io.github.akueisara.currencyconversion.BuildConfig;
-import io.github.akueisara.currencyconversion.R;
 import io.github.akueisara.currencyconversion.api.model.SupportedCurrencies;
 import io.github.akueisara.currencyconversion.api.model.ExchangeRates;
 import io.reactivex.Observable;
@@ -22,7 +20,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public final class CurrencyLayerApiManager {
 
-    private static final String API_BASE_URL = "http://apilayer.net/api/";
+    public static final String API_KEY = BuildConfig.CURRENCY_LAYER_API_KEY;
+    private static final String API_BASE_URL = "https://apilayer.net/api/";
     public static final String API_DEFAULT_CURRENCY = "USD";
 
     private static volatile CurrencyLayerApiManager sharedInstance = new CurrencyLayerApiManager();
@@ -51,10 +50,6 @@ public final class CurrencyLayerApiManager {
         mCurrencyLayerApiService = mRetrofit.build().create(CurrencyLayerApiService.class);
     }
 
-    public Retrofit.Builder getRetrofitBuilder() {
-        return mRetrofit;
-    }
-
     public static CurrencyLayerApiManager getInstance() {
         if (sharedInstance == null) {
             synchronized (CurrencyLayerApiManager.class) {
@@ -69,9 +64,9 @@ public final class CurrencyLayerApiManager {
     public void getExchangeRateData(Context context, String source, Observer<ExchangeRates> observer) {
         Observable<ExchangeRates> observable;
         if(source.equals(API_DEFAULT_CURRENCY)) {
-            observable = mCurrencyLayerApiService.getDefaultExchangeRatesData(context.getString(R.string.currencylayer_api_key));
+            observable = mCurrencyLayerApiService.getDefaultExchangeRatesData(API_KEY);
         } else {
-            observable = mCurrencyLayerApiService.getExchangeRateData(context.getString(R.string.currencylayer_api_key), source);
+            observable = mCurrencyLayerApiService.getExchangeRateData(API_KEY, source);
         }
         observable.subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -79,7 +74,7 @@ public final class CurrencyLayerApiManager {
     }
 
     public void getCurrencyList(Context context, Observer<SupportedCurrencies> observer) {
-        mCurrencyLayerApiService.getSupportedCurrencies(context.getString(R.string.currencylayer_api_key))
+        mCurrencyLayerApiService.getSupportedCurrencies(API_KEY)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(observer);

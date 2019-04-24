@@ -1,4 +1,4 @@
-package io.github.akueisara.currencyconversion.api.model.CurrencyLayerApiError;
+package io.github.akueisara.currencyconversion.api.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

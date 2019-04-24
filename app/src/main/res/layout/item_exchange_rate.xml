@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/exchange_rate_item_width"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_margin="4dp"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    card_view:cardElevation="1dp"
+    card_view:cardCornerRadius="2dp">
+
+    <LinearLayout
+        android:layout_margin="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/currency_flag_image_view"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            card_view:srcCompat="@drawable/flag_missing"
+            android:layout_gravity="center_horizontal"/>
+
+        <TextView
+            android:id="@+id/currency_name_text"
+            android:layout_gravity="center_horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="USD"/>
+
+        <TextView
+            android:id="@+id/currency_exchange_rate_text"
+            android:layout_gravity="center_horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="30.543212"/>
+
+    </LinearLayout>
+
+</android.support.v7.widget.CardView>

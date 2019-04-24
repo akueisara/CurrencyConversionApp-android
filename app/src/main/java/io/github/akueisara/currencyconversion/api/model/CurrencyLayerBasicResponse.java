@@ -1,4 +1,4 @@
-package io.github.akueisara.currencyconversion.api.model.CurrencyLayerApiError;
+package io.github.akueisara.currencyconversion.api.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Created by Kuei on 2019-04-23.
  */
-public class CurrencyLayerErrorResponse {
+public class CurrencyLayerBasicResponse {
 
     @SerializedName("success")
     @Expose

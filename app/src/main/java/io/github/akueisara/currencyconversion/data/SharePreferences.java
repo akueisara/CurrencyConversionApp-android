@@ -7,7 +7,7 @@ import android.preference.PreferenceManager;
 /**
  * Created by Kuei on 2019-04-23.
  */
-public final class CurrencyConversionPreferences {
+public final class SharePreferences {
     private static final String PREF_LAST_UPDATE_RATES_TIME = "last_update_rates_time";
     private static final String PREF_SELECTED_CURRENCY = "selected_currency";
 

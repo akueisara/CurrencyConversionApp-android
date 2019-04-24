@@ -4,12 +4,10 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.Map;
 
-import io.github.akueisara.currencyconversion.api.model.CurrencyLayerApiError.CurrencyLayerErrorResponse;
-
 /**
  * Created by Kuei on 2019-04-23.
  */
-public class ExchangeRates extends CurrencyLayerErrorResponse {
+public class ExchangeRates extends CurrencyLayerBasicResponse {
 
     @SerializedName("terms")
     private String mTerms;
@@ -18,7 +16,7 @@ public class ExchangeRates extends CurrencyLayerErrorResponse {
     private String mPrivacy;
 
     @SerializedName("timestamp")
-    private long mTimeStamp;
+    private int mTimeStamp;
 
     @SerializedName("source")
     private String mSource;
@@ -34,7 +32,7 @@ public class ExchangeRates extends CurrencyLayerErrorResponse {
         return mPrivacy;
     }
 
-    public long getTimeStamp() {
+    public int getTimeStamp() {
         return mTimeStamp;
     }
 

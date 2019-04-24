@@ -6,12 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import io.github.akueisara.currencyconversion.api.model.CurrencyLayerApiError.CurrencyLayerErrorResponse;
-
 /**
  * Created by Kuei on 2019-04-22.
  */
-public class SupportedCurrencies extends CurrencyLayerErrorResponse {
+public class SupportedCurrencies extends CurrencyLayerBasicResponse {
 
     @SerializedName("terms")
     private String mTerms;
@@ -23,12 +21,6 @@ public class SupportedCurrencies extends CurrencyLayerErrorResponse {
     private Map<String, String> mCurrencies;
 
     private List<Currency> mSupportedCurrencyList;
-
-    public SupportedCurrencies(String success, String terms, String privacy, Map<String, String> currencies) {
-        this.mTerms = terms;
-        this.mPrivacy = privacy;
-        this.mCurrencies = currencies;
-    }
 
     public String getTerms() {
         return mTerms;

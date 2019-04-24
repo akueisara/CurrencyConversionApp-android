@@ -20,7 +20,7 @@ public final class SharePreferences {
 
     public static long getLastUpdateRatesTimeInMillis(Context context) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-        return sp.getLong(PREF_LAST_UPDATE_RATES_TIME, System.currentTimeMillis());
+        return sp.getLong(PREF_LAST_UPDATE_RATES_TIME, 0);
     }
 
     public static void saveSelectedCurrency(Context context, String currency) {

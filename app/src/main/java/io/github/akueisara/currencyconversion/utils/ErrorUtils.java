@@ -26,7 +26,7 @@ public class ErrorUtils {
             Logger.e(e, "SocketTimeoutException: %s", e.getLocalizedMessage());
         } else if (e instanceof IOException) {
             Logger.e(e, "IOException: %s", e.getLocalizedMessage());
-            Toast.makeText(context, "Network connection is not stable. Please try it again later.", Toast.LENGTH_LONG).show();
+//            Toast.makeText(context, "Network connection is not stable. Please try it again later.", Toast.LENGTH_LONG).show();
         } else {
             Logger.e(e, "UnknownException: %s", e.getLocalizedMessage());
         }

@@ -129,14 +129,6 @@ public class MainActivity extends AppCompatActivity {
 
         initExchangeRateView();
 
-        // For rotation
-        if(savedInstanceState != null) {
-            mExchangeRateList = (Map<String, Double>) savedInstanceState.getSerializable(EXCHANGE_RATE_HASH_MAP);
-            refreshExchangeRateView(mExchangeRateList);
-            mCurrencyArray = savedInstanceState.getStringArray(SUPPORTED_CURRENCY);
-            setupCurrencySpinner(mCurrencyArray);
-        }
-
         getSupportedCurrenciesApiRequest();
 
         setupCurrencyAmountEditTextListeners();
@@ -154,7 +146,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // For rotation
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        mExchangeRateList = (Map<String, Double>) savedInstanceState.getSerializable(EXCHANGE_RATE_HASH_MAP);
+        refreshExchangeRateView(mExchangeRateList);
+        mCurrencyArray = savedInstanceState.getStringArray(SUPPORTED_CURRENCY);
+        setupCurrencySpinner(mCurrencyArray);
+    }
+
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess(ExchangeRateEntry exchangeRateEntry) {
-                Logger.d("getExchangeRates success: %s", exchangeRateEntry.getQuotes());
+                Logger.d("getExchangeRates success: %s", exchangeRateEntry.getSource());
                 setExchangeRateViewWithLocalData(exchangeRateEntry);
             }
 
@@ -379,6 +379,8 @@ public class MainActivity extends AppCompatActivity {
             mCurrencySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    mOldRate = 1.00;
+                    mCurrencyAmountEditText.setText(MainActivity.this.getString(R.string.default_currency_amount));
                     String selectedCurrency = currencyArray[position];
                     getExchangeRateBaseOnCurrency(selectedCurrency);
                 }
@@ -399,6 +401,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setExchangeRateViewWithLocalData(ExchangeRateEntry exchangeRateEntry) {
+        SharePreferences.saveSelectedCurrency(MainActivity.this, exchangeRateEntry.getSource());
         mExchangeRateList = new Gson().fromJson(exchangeRateEntry.getQuotes(), Map.class);
         refreshExchangeRateView(mExchangeRateList);
     }

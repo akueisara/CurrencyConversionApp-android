@@ -243,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
                     Gson gson = new GsonBuilder().create();
                     String quoteJsonString = gson.toJson(value.getQuotes());
                     ExchangeRateEntry exchangeRateEntry = new ExchangeRateEntry(time, value.getSource(), quoteJsonString);
-                    mDb.loadExchangeRates(MainActivity.this, source, exchangeRateEntry);
+                    mDb.loadExchangeRates(MainActivity.this, value.getSource(), exchangeRateEntry);
                 } else {
                     Logger.d(value.getErrorMessage().toString());
                     if(mExchangeRateList.size() == 0) {

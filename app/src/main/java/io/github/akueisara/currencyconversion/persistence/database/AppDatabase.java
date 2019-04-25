@@ -51,15 +51,15 @@ public abstract class AppDatabase extends RoomDatabase {
         Disposable disposable = sInstance.exchangeRateTao().loadExchangeRateBySource(source)
                 .subscribeOn(Schedulers.io())
                 .subscribe(exchangeRateEntry1 -> {
+                    Logger.d("loadExchangeRates success %s", exchangeRateEntry1.getSource());
                     Logger.d("Last Updated Time for %s: %s, %s", source, String.valueOf(exchangeRateEntry1.getUpdatedAt() * 1000L), new Date(exchangeRateEntry1.getUpdatedAt() * 1000L));
                     if(TimeUtils.durationOverThirtyMinutes(exchangeRateEntry1.getUpdatedAt() * 1000L)) {
                         exchangeRateEntry1.setQuotes(exchangeRateEntry.getQuotes());
                         exchangeRateEntry1.setUpdatedAt(exchangeRateEntry.getUpdatedAt());
                         updateExchangeRates(context, exchangeRateEntry1);
-                        Logger.d("loadExchangeRateBySource success %s", exchangeRateEntry1.getQuotes());
                     }
                 }, throwable -> {
-//                    Logger.e(throwable, throwable.getLocalizedMessage());
+                    Logger.e(throwable, throwable.getLocalizedMessage());
                     insertExchangeRates(context, exchangeRateEntry);
                 });
         mCompositeDisposable.add(disposable);

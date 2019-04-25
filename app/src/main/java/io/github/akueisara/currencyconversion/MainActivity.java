@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private AppDatabase mDb;
     private String mCurrentAmount = "";
     private boolean mNetworkConnection = true;
+    private Double mOldRate = 1.00;
 
     private final BroadcastReceiver mNetworkChangeReceiver = new BroadcastReceiver(){
         Context context;
@@ -308,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupCurrencyAmountEditTextListeners() {
         mCurrencyAmountEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if(hasFocus) {
+                mOldRate = getPureCurrencyNumber();
                 if(getPureCurrencyNumber() == 1) {
                     mCurrencyAmountEditText.setText(getString(R.string.zero_currency_amount));
                 }
@@ -359,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Double getPureCurrencyNumber() {
         String cleanString = mCurrencyAmountEditText.getText().toString().replaceAll("[$,.]", "");
-        return  Double.parseDouble(cleanString);
+        return  Double.parseDouble(cleanString) / 100;
     }
 
     private void setupLocalCurrencySpinner() {
@@ -413,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
         mExchangeRateList = exchangeRateList;
         for (Map.Entry<String, Double> stringDoubleEntry : mExchangeRateList.entrySet()) {
             Map.Entry pair = stringDoubleEntry;
-            mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() * getPureCurrencyNumber());
+            mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() / mOldRate * getPureCurrencyNumber());
             mExchangeRateAdapter.setExchangeRate(mExchangeRateList);
         }
     }

@@ -31,12 +31,13 @@
 
         <TextView
             android:id="@+id/currency_exchange_rate_text"
-            android:layout_gravity="center_horizontal"
-            android:layout_width="wrap_content"
+            android:gravity="center"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:autoSizeTextType="uniform"
+            android:maxLines="1"
             app:autoSizeMinTextSize="8sp"
-            tools:text="30000000000.543212"/>
+            tools:text="300.54"/>
 
     </LinearLayout>
 

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">CurrencyConversionApp</string>
+    <string name="zero_currency_amount">0.00</string>
+    <string name="default_currency_amount">1.00</string>
+    <string name="text_network_hint">Please connect the internet to get exchange rates</string>
+    <string name="hint_enter">Enter</string>
 </resources>

@@ -43,4 +43,9 @@ public class ExchangeRates extends CurrencyLayerBasicResponse {
     public Map<String, Double> getQuotes() {
         return mQuotes;
     }
+
+    @Override
+    public String toString() {
+        return "ExchangeRates{" + "mTerms='" + mTerms + '\'' + ", mPrivacy='" + mPrivacy + '\'' + ", mTimeStamp=" + mTimeStamp + ", mSource='" + mSource + '\'' + ", mQuotes=" + mQuotes + '}';
+    }
 }

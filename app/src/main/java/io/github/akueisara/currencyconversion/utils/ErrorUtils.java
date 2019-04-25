@@ -3,15 +3,15 @@ package io.github.akueisara.currencyconversion.utils;
 import android.content.Context;
 import android.widget.Toast;
 
+import com.orhanobut.logger.Logger;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 
-import okhttp3.ResponseBody;
 import retrofit2.HttpException;
 import retrofit2.Response;
-import timber.log.Timber;
 
 /**
  * Created by Kuei on 2019-04-24.
@@ -21,22 +21,14 @@ public class ErrorUtils {
     public static void parseError(Context context, Throwable e) {
         if (e instanceof HttpException) {
             Response<?> response = ((HttpException)e).response();
-            Timber.d(e, "HttpException: Code - %s, Message - %s",response.raw().code(), response.raw().message());
+            Logger.e(e, "HttpException: Code - %s, Message - %s",response.raw().code(), response.raw().message());
         } else if (e instanceof SocketTimeoutException) {
-            Timber.d(e, "SocketTimeoutException: %s", e.getLocalizedMessage());
+            Logger.e(e, "SocketTimeoutException: %s", e.getLocalizedMessage());
         } else if (e instanceof IOException) {
-            Timber.d(e, "IOException: %s", e.getLocalizedMessage());
+            Logger.e(e, "IOException: %s", e.getLocalizedMessage());
+            Toast.makeText(context, "Network connection is not stable. Please try it again later.", Toast.LENGTH_LONG).show();
         } else {
-            Timber.d(e, "UnknownException: %s", e.getLocalizedMessage());
-        }
-    }
-
-    private static String getErrorMessage(String response) {
-        try {
-            JSONObject jsonObject = new JSONObject(response);
-            return jsonObject.getString("message");
-        } catch (Exception e) {
-            return e.getMessage();
+            Logger.e(e, "UnknownException: %s", e.getLocalizedMessage());
         }
     }
 }

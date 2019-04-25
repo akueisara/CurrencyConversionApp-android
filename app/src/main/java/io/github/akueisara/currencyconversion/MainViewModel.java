@@ -3,10 +3,9 @@ package io.github.akueisara.currencyconversion;
 import android.app.Application;
 import android.arch.lifecycle.AndroidViewModel;
 
-import io.github.akueisara.currencyconversion.data.SharePreferences;
-import io.github.akueisara.currencyconversion.data.database.AppDatabase;
-import io.github.akueisara.currencyconversion.data.database.ExchangeRateEntry;
-import io.reactivex.Observer;
+import io.github.akueisara.currencyconversion.persistence.SharePreferences;
+import io.github.akueisara.currencyconversion.persistence.database.AppDatabase;
+import io.github.akueisara.currencyconversion.persistence.database.ExchangeRateEntry;
 import io.reactivex.SingleObserver;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;

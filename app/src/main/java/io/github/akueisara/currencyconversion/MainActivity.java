@@ -1,44 +1,56 @@
 package io.github.akueisara.currencyconversion;
 
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.orhanobut.logger.AndroidLogAdapter;
+import com.orhanobut.logger.Logger;
 
 import java.io.Serializable;
+import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.Collections;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.github.akueisara.currencyconversion.adapters.ExchangeRateAdapter;
 import io.github.akueisara.currencyconversion.api.CurrencyLayerApiManager;
 import io.github.akueisara.currencyconversion.api.model.SupportedCurrencies;
 import io.github.akueisara.currencyconversion.api.model.ExchangeRates;
-import io.github.akueisara.currencyconversion.data.SharePreferences;
-import io.github.akueisara.currencyconversion.data.database.AppDatabase;
-import io.github.akueisara.currencyconversion.data.database.ExchangeRateEntry;
+import io.github.akueisara.currencyconversion.persistence.SharePreferences;
+import io.github.akueisara.currencyconversion.persistence.database.AppDatabase;
+import io.github.akueisara.currencyconversion.persistence.database.ExchangeRateEntry;
 import io.github.akueisara.currencyconversion.utils.ErrorUtils;
-import io.github.akueisara.currencyconversion.utils.Utils;
-import io.reactivex.Completable;
-import io.reactivex.CompletableObserver;
+import io.github.akueisara.currencyconversion.utils.TimeUtils;
+import io.github.akueisara.currencyconversion.utils.ViewUtils;
 import io.reactivex.Observer;
 import io.reactivex.SingleObserver;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Action;
 import io.reactivex.schedulers.Schedulers;
-import timber.log.Timber;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,13 +61,54 @@ public class MainActivity extends AppCompatActivity {
     Spinner mCurrencySpinner;
     @BindView(R.id.exchange_rate_recycler_view)
     RecyclerView mExchangeRateRecyclerView;
+    @BindView(R.id.currency_amount_edit_text)
+    TextInputEditText mCurrencyAmountEditText;
+    @BindView(R.id.progress_bar_layout)
+    RelativeLayout mProgressBarLayout;
 
     private ExchangeRateAdapter mExchangeRateAdapter;
-    private String[] mCurrencyArray;
     private Map<String, Double> mExchangeRateList;
+    private String[] mCurrencyArray;
 
     private AppDatabase mDb;
-    private CompositeDisposable mCompositeDisposable;
+    private String mCurrentAmount = "";
+    private boolean mNetworkConnection = true;
+
+    private final BroadcastReceiver mNetworkChangeReceiver = new BroadcastReceiver(){
+        Context context;
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            this.context = context;
+            if(isOnline()){
+                if(!mNetworkConnection) {
+                    mNetworkConnection = true;
+                    Logger.d("Network connection change: %s", isOnline());
+                    if (mCurrencyArray == null || mCurrencyArray.length == 1) {
+                        getSupportedCurrenciesApiRequest();
+                    }
+                    if (mExchangeRateList.size() == 0 || TimeUtils.durationOverThirtyMinutes(SharePreferences.getLastUpdateRatesTimeInMillis(MainActivity.this)) ) {
+                        getExchangeRateBaseOnCurrencyApiRequest(SharePreferences.getSelectedCurrency(MainActivity.this));
+                    }
+                }
+            } else {
+                mNetworkConnection = false;
+            }
+        }
+
+        protected boolean isOnline() {
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo netInfo = cm.getActiveNetworkInfo();
+            return netInfo != null && netInfo.isConnected();
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        registerReceiver(mNetworkChangeReceiver, new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,27 +116,63 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
+        Logger.addLogAdapter(new AndroidLogAdapter() {
+            @Override public boolean isLoggable(int priority, String tag) {
+                return BuildConfig.DEBUG;
+            }
+        });
 
         if (SharePreferences.getSelectedCurrency(this).isEmpty()) {
             SharePreferences.saveSelectedCurrency(this, CurrencyLayerApiManager.API_DEFAULT_CURRENCY);
         }
 
+        initExchangeRateView();
+
+        // For rotation
         if(savedInstanceState != null) {
             mExchangeRateList = (Map<String, Double>) savedInstanceState.getSerializable(EXCHANGE_RATE_HASH_MAP);
+            refreshExchangeRateView(mExchangeRateList);
             mCurrencyArray = savedInstanceState.getStringArray(SUPPORTED_CURRENCY);
             setupCurrencySpinner(mCurrencyArray);
-            setupExchangeRateView(mExchangeRateList);
-        } else {
-            getSupportedCurrenciesApiRequest();
         }
+
+        getSupportedCurrenciesApiRequest();
+
+        setupCurrencyAmountEditTextListeners();
 
         mDb = AppDatabase.getInstance(getApplicationContext());
         setupViewModel();
+    }
 
-        mCompositeDisposable = new CompositeDisposable();
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (TimeUtils.durationOverThirtyMinutes(SharePreferences.getLastUpdateRatesTimeInMillis(MainActivity.this)) ) {
+            getExchangeRateBaseOnCurrencyApiRequest(SharePreferences.getSelectedCurrency(MainActivity.this));
+        }
+    }
+
+    // For rotation
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable(EXCHANGE_RATE_HASH_MAP, (Serializable) mExchangeRateList);
+        outState.putStringArray(SUPPORTED_CURRENCY, mCurrencyArray);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        unregisterReceiver(mNetworkChangeReceiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        mDb.disposeCompositeDisposable();
     }
 
     private void setupViewModel() {
@@ -96,46 +185,94 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess(ExchangeRateEntry exchangeRateEntry) {
-                Timber.d("getExchangeRates success: %s", exchangeRateEntry.getQuotes());
-                mExchangeRateList = new Gson().fromJson(exchangeRateEntry.getQuotes(), Map.class);
-                setupExchangeRateView(mExchangeRateList);
+                Logger.d("getExchangeRates success: %s", exchangeRateEntry.getQuotes());
+                setExchangeRateViewWithLocalData(exchangeRateEntry);
             }
 
             @Override
             public void onError(Throwable e) {
-                Timber.d(e, e.getLocalizedMessage());
+//                Logger.e(e, e.getLocalizedMessage());
             }
         });
     }
 
+    private void getExchangeRateBaseOnCurrency(String source) {
+        mDb.exchangeRateTao().loadExchangeRateBySource(source)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new SingleObserver<ExchangeRateEntry>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+                    }
 
-        if(durationOverThirtyMinutes(SharePreferences.getLastUpdateRatesTimeInMillis(this))) {
-            getExchangeRateBaseOnCurrencyApiRequest(SharePreferences.getSelectedCurrency(this));
-        }
+                    @Override
+                    public void onSuccess(ExchangeRateEntry exchangeRateEntry) {
+                        setExchangeRateViewWithLocalData(exchangeRateEntry);
+                        if (TimeUtils.durationOverThirtyMinutes(exchangeRateEntry.getUpdatedAt() * 1000L)) {
+                            getExchangeRateBaseOnCurrencyApiRequest(source);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        // No exchange rates in database
+                        getExchangeRateBaseOnCurrencyApiRequest(source);
+                    }
+                });
+
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putSerializable(EXCHANGE_RATE_HASH_MAP, (Serializable) mExchangeRateList);
-        outState.putStringArray(SUPPORTED_CURRENCY, mCurrencyArray);
-    }
+    private void getExchangeRateBaseOnCurrencyApiRequest(String source) {
+        CurrencyLayerApiManager.getInstance().getExchangeRateData(source, new Observer<ExchangeRates>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                mExchangeRateList = Collections.emptyMap();
+                mProgressBarLayout.setVisibility(View.VISIBLE);
+            }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+            @Override
+            public void onNext(ExchangeRates value) {
+                if(value.getSuccess()) {
+                    Logger.d("get ExchangeRate from API: %s", value);
+                    int time = (int) (System.currentTimeMillis() / 1000L);
+                    refreshExchangeRateView(value.getQuotes());
+                    SharePreferences.saveSelectedCurrency(MainActivity.this, value.getSource());
 
-        mCompositeDisposable.dispose();
+                    Gson gson = new GsonBuilder().create();
+                    String quoteJsonString = gson.toJson(value.getQuotes());
+                    ExchangeRateEntry exchangeRateEntry = new ExchangeRateEntry(time, value.getSource(), quoteJsonString);
+                    mDb.loadExchangeRates(MainActivity.this, source, exchangeRateEntry);
+                } else {
+                    Logger.d(value.getErrorMessage().toString());
+                    if(mExchangeRateList.size() == 0) {
+                        mExchangeRateRecyclerView.setVisibility(View.GONE);
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                ErrorUtils.parseError(MainActivity.this, e);
+                mProgressBarLayout.setVisibility(View.GONE);
+                if(mExchangeRateList.size() == 0) {
+                    mExchangeRateRecyclerView.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onComplete() {
+                mProgressBarLayout.setVisibility(View.GONE);
+            }
+        });
     }
 
     private void getSupportedCurrenciesApiRequest() {
-        CurrencyLayerApiManager.getInstance().getCurrencyList(this, new Observer<SupportedCurrencies>() {
+        CurrencyLayerApiManager.getInstance().getCurrencyList(new Observer<SupportedCurrencies>() {
             @Override
-            public void onSubscribe(Disposable d) {}
+            public void onSubscribe(Disposable d) {
+                mProgressBarLayout.setVisibility(View.VISIBLE);
+            }
 
             @Override
             public void onNext(SupportedCurrencies value) {
@@ -145,19 +282,89 @@ public class MainActivity extends AppCompatActivity {
                         setupCurrencySpinner(Arrays.copyOf(currencyArray, currencyArray.length, String[].class));
                     }
                 } else {
-                    Timber.d(value.getErrorMessage().toString());
+                    Logger.d(value.getErrorMessage().toString());
+                    if(mCurrencyArray == null) {
+                        setupLocalCurrencySpinner();
+                    }
                 }
-
             }
 
             @Override
             public void onError(Throwable e) {
                 ErrorUtils.parseError(MainActivity.this, e);
+                mProgressBarLayout.setVisibility(View.GONE);
+                if(mCurrencyArray == null) {
+                    setupLocalCurrencySpinner();
+                }
             }
 
             @Override
-            public void onComplete() {}
+            public void onComplete() {
+                mProgressBarLayout.setVisibility(View.GONE);
+            }
         });
+    }
+
+    private void setupCurrencyAmountEditTextListeners() {
+        mCurrencyAmountEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if(hasFocus) {
+                if(getPureCurrencyNumber() == 1) {
+                    mCurrencyAmountEditText.setText(getString(R.string.zero_currency_amount));
+                }
+            } else {
+                if(getPureCurrencyNumber() == 0) {
+                    mCurrencyAmountEditText.setText(getString(R.string.default_currency_amount));
+                }
+            }
+        });
+
+        mCurrencyAmountEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if(!s.toString().equals(mCurrentAmount)){
+                    mCurrencyAmountEditText.removeTextChangedListener(this);
+
+                    String cleanString = s.toString().replaceAll("[$,.]", "");
+
+                    double parsed = Double.parseDouble(cleanString);
+                    String formatted = NumberFormat.getCurrencyInstance(Locale.US).format((parsed/100));
+
+                    mCurrentAmount = formatted.replace("$", "");
+                    mCurrencyAmountEditText.setText(formatted);
+                    mCurrencyAmountEditText.setSelection(formatted.length());
+
+                    mCurrencyAmountEditText.addTextChangedListener(this);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        mCurrencyAmountEditText.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+                mCurrencyAmountEditText.clearFocus();
+                ViewUtils.hideKeyboard(this, mCurrencyAmountEditText);
+                refreshExchangeRateView(mExchangeRateList);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private Double getPureCurrencyNumber() {
+        String cleanString = mCurrencyAmountEditText.getText().toString().replaceAll("[$,.]", "");
+        return  Double.parseDouble(cleanString);
+    }
+
+    private void setupLocalCurrencySpinner() {
+        String[] array = {SharePreferences.getSelectedCurrency(MainActivity.this)};
+        setupCurrencySpinner(array);
     }
 
     private void setupCurrencySpinner(String[] currencyArray) {
@@ -171,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     String selectedCurrency = currencyArray[position];
-                    getExchangeRateBaseOnCurrencyApiRequest(selectedCurrency);
+                    getExchangeRateBaseOnCurrency(selectedCurrency);
                 }
 
                 @Override
@@ -182,118 +389,32 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void getExchangeRateBaseOnCurrencyApiRequest(String source) {
-        CurrencyLayerApiManager.getInstance().getExchangeRateData(this, source, new Observer<ExchangeRates>() {
-            @Override
-            public void onSubscribe(Disposable d) {
-
-            }
-
-            @Override
-            public void onNext(ExchangeRates value) {
-                if(value.getSuccess()) {
-                    Timber.d("get ExchangeRate from API: %s", value);
-                    int time = (int) (System.currentTimeMillis() / 1000L);
-                    setupExchangeRateView(value.getQuotes());
-                    SharePreferences.saveSelectedCurrency(MainActivity.this, value.getSource());
-
-                    Gson gson = new GsonBuilder().create();
-                    String quoteJsonString = gson.toJson(value.getQuotes());
-                    ExchangeRateEntry exchangeRateEntry = new ExchangeRateEntry(time, value.getSource(), quoteJsonString);
-                    loadExchangeRates(source, exchangeRateEntry);
-
-                } else {
-                    Timber.d(value.getErrorMessage().toString());
-                }
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                ErrorUtils.parseError(MainActivity.this, e);
-            }
-
-            @Override
-            public void onComplete() {
-
-            }
-        });
+    private void initExchangeRateView() {
+        mExchangeRateList = Collections.emptyMap();
+        mExchangeRateAdapter = new ExchangeRateAdapter(this, mExchangeRateList);
+        mExchangeRateRecyclerView.setAdapter(mExchangeRateAdapter);
+        mExchangeRateRecyclerView.setHasFixedSize(true);
     }
 
-    private void loadExchangeRates(String source, ExchangeRateEntry exchangeRateEntry) {
-        Disposable disposable = mDb.exchangeRateTao().loadExchangeRateBySource(source)
-                .subscribeOn(Schedulers.io())
-                .subscribe(exchangeRateEntry1 -> {
-                    Timber.d("Last Updated Time for %s: %s, %s", source, String.valueOf(exchangeRateEntry1.getUpdatedAt() * 1000L), new Date(exchangeRateEntry1.getUpdatedAt() * 1000L));
-                    if(durationOverThirtyMinutes(exchangeRateEntry1.getUpdatedAt() * 1000L)) {
-                        exchangeRateEntry1.setQuotes(exchangeRateEntry.getQuotes());
-                        exchangeRateEntry1.setUpdatedAt(exchangeRateEntry.getUpdatedAt());
-                        updateExchangeRates(exchangeRateEntry1);
-                        Timber.d("loadExchangeRateBySource success %s", exchangeRateEntry1.getQuotes());
-                    }
-                }, throwable -> {
-                    Timber.d(throwable, throwable.getLocalizedMessage());
-                    insertExchangeRates(exchangeRateEntry);
-                });
-        mCompositeDisposable.add(disposable);
+    private void setExchangeRateViewWithLocalData(ExchangeRateEntry exchangeRateEntry) {
+        mExchangeRateList = new Gson().fromJson(exchangeRateEntry.getQuotes(), Map.class);
+        refreshExchangeRateView(mExchangeRateList);
     }
 
-    private void updateExchangeRates(ExchangeRateEntry exchangeRateEntry1) {
-        Completable.fromAction(() -> mDb.exchangeRateTao().updateExchangeRate(exchangeRateEntry1))
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io())
-                .subscribe(new CompletableObserver() {
-                    @Override
-                    public void onSubscribe(Disposable d) {
-
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        Timber.d("updateExchangeRate success");
-                        SharePreferences.saveLastUpdateRatesTime(MainActivity.this, exchangeRateEntry1.getUpdatedAt() * 1000L);
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Timber.d(e, e.getLocalizedMessage());
-                    }
-                });
-    }
-
-    private void insertExchangeRates(ExchangeRateEntry exchangeRateEntry) {
-        Completable.fromAction(() -> mDb.exchangeRateTao().insertExchangeRate(exchangeRateEntry)).observeOn(AndroidSchedulers.mainThread())
-                .subscribeOn(Schedulers.io())
-                .subscribe(new CompletableObserver() {
-                    @Override
-                    public void onSubscribe(Disposable d) {
-
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        Timber.d("insertExchangeRate success");
-                        SharePreferences.saveLastUpdateRatesTime(MainActivity.this, exchangeRateEntry.getUpdatedAt() * 1000L);
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Timber.d(e, e.getLocalizedMessage());
-                    }
-                });
-    }
-
-    private void setupExchangeRateView(Map<String, Double> exchangeRateList) {
+    private void refreshExchangeRateView(Map<String, Double> exchangeRateList) {
         if(exchangeRateList != null) {
-            mExchangeRateList = exchangeRateList;
-            mExchangeRateAdapter = new ExchangeRateAdapter(this, mExchangeRateList);
-            mExchangeRateRecyclerView.setAdapter(mExchangeRateAdapter);
-            mExchangeRateRecyclerView.setLayoutManager(new GridLayoutManager(this, Utils.calculateNoOfColumns(this, mExchangeRateList.size(), (int) getResources().getDimension(R.dimen.exchange_rate_item_width))));
+            calculateExchangeRates(exchangeRateList);
+            mExchangeRateRecyclerView.setVisibility(View.VISIBLE);
+            mExchangeRateRecyclerView.setLayoutManager(new GridLayoutManager(this, ViewUtils.calculateNoOfColumns(this, mExchangeRateList.size(), (int) getResources().getDimension(R.dimen.exchange_rate_item_width))));
         }
     }
 
-    private boolean durationOverThirtyMinutes(long time) {
-        Timber.d("Current time: %s", System.currentTimeMillis());
-        Timber.d(String.valueOf(TimeUnit.MINUTES.toMillis(30)));
-        return System.currentTimeMillis() - time > TimeUnit.MINUTES.toMillis(30);
+    private void calculateExchangeRates(Map<String, Double> exchangeRateList) {
+        mExchangeRateList = exchangeRateList;
+        for (Map.Entry<String, Double> stringDoubleEntry : mExchangeRateList.entrySet()) {
+            Map.Entry pair = stringDoubleEntry;
+            mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() * getPureCurrencyNumber());
+            mExchangeRateAdapter.setExchangeRate(mExchangeRateList);
+        }
     }
 }

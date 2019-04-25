@@ -1,4 +1,4 @@
-package io.github.akueisara.currencyconversion.data.database;
+package io.github.akueisara.currencyconversion.persistence.database;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;

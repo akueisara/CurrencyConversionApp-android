@@ -1,4 +1,4 @@
-package io.github.akueisara.currencyconversion;
+package io.github.akueisara.currencyconversion.adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -9,11 +9,14 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.orhanobut.logger.Logger;
+
 import java.util.Locale;
 import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.github.akueisara.currencyconversion.R;
 
 /**
  * Created by Kuei on 2019-04-24.
@@ -24,7 +27,7 @@ public class ExchangeRateAdapter extends RecyclerView.Adapter<ExchangeRateAdapte
     private Object[] mExchangeRateKeyArray;
     private Context mContext;
 
-    ExchangeRateAdapter(Context context, Map<String, Double> exchangeRateList) {
+    public ExchangeRateAdapter(Context context, Map<String, Double> exchangeRateList) {
         mContext = context;
         mExchangeRateList = exchangeRateList;
         mExchangeRateKeyArray = exchangeRateList.keySet().toArray();
@@ -43,7 +46,7 @@ public class ExchangeRateAdapter extends RecyclerView.Adapter<ExchangeRateAdapte
         String currencyName = (String) mExchangeRateKeyArray[i];
         Double currencyRate = mExchangeRateList.get(currencyName);
         int resId = mContext.getResources().getIdentifier("flag_" + currencyName.substring(3).toLowerCase(), "drawable", mContext.getPackageName());
-        if(resId != 0) {
+        if (resId != 0) {
             viewHolder.mCurrencyFlagImageView.setImageDrawable(mContext.getResources().getDrawable(resId));
         }
         viewHolder.mCurrencyNameText.setText(currencyName.substring(3));
@@ -53,6 +56,16 @@ public class ExchangeRateAdapter extends RecyclerView.Adapter<ExchangeRateAdapte
     @Override
     public int getItemCount() {
         return mExchangeRateList.size();
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return position;
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -71,6 +84,8 @@ public class ExchangeRateAdapter extends RecyclerView.Adapter<ExchangeRateAdapte
 
     public void setExchangeRate(Map<String, Double> exchangeRateList) {
         mExchangeRateList = exchangeRateList;
+        mExchangeRateKeyArray = exchangeRateList.keySet().toArray();
         notifyDataSetChanged();
     }
+
 }

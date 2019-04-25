@@ -61,7 +61,7 @@ public final class CurrencyLayerApiManager {
     }
 
 
-    public void getExchangeRateData(Context context, String source, Observer<ExchangeRates> observer) {
+    public void getExchangeRateData(String source, Observer<ExchangeRates> observer) {
         Observable<ExchangeRates> observable;
         if(source.equals(API_DEFAULT_CURRENCY)) {
             observable = mCurrencyLayerApiService.getDefaultExchangeRatesData(API_KEY);
@@ -73,7 +73,7 @@ public final class CurrencyLayerApiManager {
                 .subscribe(observer);
     }
 
-    public void getCurrencyList(Context context, Observer<SupportedCurrencies> observer) {
+    public void getCurrencyList(Observer<SupportedCurrencies> observer) {
         mCurrencyLayerApiService.getSupportedCurrencies(API_KEY)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())

@@ -331,9 +331,9 @@ public class MainActivity extends AppCompatActivity {
                     String cleanString = s.toString().replaceAll("[$,.]", "");
 
                     double parsed = Double.parseDouble(cleanString);
-                    String formatted = NumberFormat.getCurrencyInstance(Locale.US).format((parsed/100));
+                    String formatted = NumberFormat.getCurrencyInstance(Locale.US).format((parsed/100)).replace("$", "");
 
-                    mCurrentAmount = formatted.replace("$", "");
+                    mCurrentAmount = formatted;
                     mCurrencyAmountEditText.setText(formatted);
                     mCurrencyAmountEditText.setSelection(formatted.length());
 

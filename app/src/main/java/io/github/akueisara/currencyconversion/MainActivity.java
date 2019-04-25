@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
                     if (mCurrencyArray == null || mCurrencyArray.length == 1) {
                         getSupportedCurrenciesApiRequest();
                     }
-                    if (mExchangeRateList.size() == 0) {
+                    if (mExchangeRateList == null || mExchangeRateList.size() == 0) {
                         getExchangeRateBaseOnCurrency(SharePreferences.getSelectedCurrency(MainActivity.this));
                     }
                 }

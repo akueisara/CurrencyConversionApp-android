@@ -117,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        Logger.clearLogAdapters();
         Logger.addLogAdapter(new AndroidLogAdapter() {
             @Override public boolean isLoggable(int priority, String tag) {
                 return BuildConfig.DEBUG;

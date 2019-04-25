@@ -14,6 +14,7 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
@@ -88,8 +89,8 @@ public class MainActivity extends AppCompatActivity {
                     if (mCurrencyArray == null || mCurrencyArray.length == 1) {
                         getSupportedCurrenciesApiRequest();
                     }
-                    if (mExchangeRateList.size() == 0 || TimeUtils.durationOverThirtyMinutes(SharePreferences.getLastUpdateRatesTimeInMillis(MainActivity.this)) ) {
-                        getExchangeRateBaseOnCurrencyApiRequest(SharePreferences.getSelectedCurrency(MainActivity.this));
+                    if (mExchangeRateList.size() == 0) {
+                        getExchangeRateBaseOnCurrency(SharePreferences.getSelectedCurrency(MainActivity.this));
                     }
                 }
             } else {
@@ -97,12 +98,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        protected boolean isOnline() {
-            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo netInfo = cm.getActiveNetworkInfo();
-            return netInfo != null && netInfo.isConnected();
-        }
+
     };
+
+    protected boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnected();
+    }
 
     @Override
     protected void onStart() {
@@ -135,16 +138,13 @@ public class MainActivity extends AppCompatActivity {
         setupCurrencyAmountEditTextListeners();
 
         mDb = AppDatabase.getInstance(getApplicationContext());
-        setupViewModel();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        if (TimeUtils.durationOverThirtyMinutes(SharePreferences.getLastUpdateRatesTimeInMillis(MainActivity.this)) ) {
-            getExchangeRateBaseOnCurrencyApiRequest(SharePreferences.getSelectedCurrency(MainActivity.this));
-        }
+        getExchangeRateBaseOnCurrency(SharePreferences.getSelectedCurrency(MainActivity.this));
     }
 
     @Override
@@ -175,27 +175,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         mDb.disposeCompositeDisposable();
-    }
-
-    private void setupViewModel() {
-        MainViewModel viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
-        viewModel.getExchangeRates(new SingleObserver<ExchangeRateEntry>() {
-            @Override
-            public void onSubscribe(Disposable d) {
-
-            }
-
-            @Override
-            public void onSuccess(ExchangeRateEntry exchangeRateEntry) {
-                Logger.d("getExchangeRates success: %s", exchangeRateEntry.getSource());
-                setExchangeRateViewWithLocalData(exchangeRateEntry);
-            }
-
-            @Override
-            public void onError(Throwable e) {
-//                Logger.e(e, e.getLocalizedMessage());
-            }
-        });
     }
 
     private void getExchangeRateBaseOnCurrency(String source) {
@@ -420,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
         for (Map.Entry<String, Double> stringDoubleEntry : mExchangeRateList.entrySet()) {
             Map.Entry pair = stringDoubleEntry;
             mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() / mOldRate * getPureCurrencyNumber());
-            mExchangeRateAdapter.setExchangeRate(mExchangeRateList);
         }
+        mExchangeRateAdapter.setExchangeRate(mExchangeRateList);
     }
 }

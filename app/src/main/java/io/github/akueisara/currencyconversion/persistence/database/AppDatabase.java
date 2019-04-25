@@ -78,7 +78,6 @@ public abstract class AppDatabase extends RoomDatabase {
                     @Override
                     public void onComplete() {
                         Logger.d("updateExchangeRate success");
-                        SharePreferences.saveLastUpdateRatesTime(context, exchangeRateEntry1.getUpdatedAt() * 1000L);
                     }
 
                     @Override
@@ -100,7 +99,6 @@ public abstract class AppDatabase extends RoomDatabase {
                     @Override
                     public void onComplete() {
                         Logger.d("insertExchangeRate success, source: %s", exchangeRateEntry.getSource());
-                        SharePreferences.saveLastUpdateRatesTime(context, exchangeRateEntry.getUpdatedAt() * 1000L);
                     }
 
                     @Override

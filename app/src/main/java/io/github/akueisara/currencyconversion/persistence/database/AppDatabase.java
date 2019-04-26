@@ -47,25 +47,26 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract ExchangeRateTao exchangeRateTao();
 
-    public void loadExchangeRates(Context context, String source, ExchangeRateEntry exchangeRateEntry) {
+    public void insertOrUpdateExchangeRatesAfterLoading(String source, ExchangeRateEntry exchangeRateEntry) {
         Disposable disposable = sInstance.exchangeRateTao().loadExchangeRateBySource(source)
                 .subscribeOn(Schedulers.io())
                 .subscribe(exchangeRateEntry1 -> {
-                    Logger.d("loadExchangeRates success %s", exchangeRateEntry1.getSource());
+                    Logger.d("insertOrUpdateExchangeRatesAfterLoading success %s", exchangeRateEntry1.getSource());
                     Logger.d("Last Updated Time for %s: %s, %s", source, String.valueOf(exchangeRateEntry1.getUpdatedAt() * 1000L), new Date(exchangeRateEntry1.getUpdatedAt() * 1000L));
                     if(TimeUtils.durationOverThirtyMinutes(exchangeRateEntry1.getUpdatedAt() * 1000L)) {
                         exchangeRateEntry1.setQuotes(exchangeRateEntry.getQuotes());
                         exchangeRateEntry1.setUpdatedAt(exchangeRateEntry.getUpdatedAt());
-                        updateExchangeRates(context, exchangeRateEntry1);
+                        updateExchangeRates(exchangeRateEntry1);
                     }
                 }, throwable -> {
-                    Logger.e(throwable, throwable.getLocalizedMessage());
-                    insertExchangeRates(context, exchangeRateEntry);
+//                    Logger.e(throwable, throwable.getLocalizedMessage());
+                    Logger.d("No %s data in database", source);
+                    insertExchangeRates(exchangeRateEntry);
                 });
         mCompositeDisposable.add(disposable);
     }
 
-    private void updateExchangeRates(Context context, ExchangeRateEntry exchangeRateEntry1) {
+    private void updateExchangeRates(ExchangeRateEntry exchangeRateEntry1) {
         Completable.fromAction(() -> sInstance.exchangeRateTao().updateExchangeRate(exchangeRateEntry1))
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.io())
@@ -87,7 +88,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 });
     }
 
-    private void insertExchangeRates(Context context, ExchangeRateEntry exchangeRateEntry) {
+    private void insertExchangeRates(ExchangeRateEntry exchangeRateEntry) {
         Completable.fromAction(() -> sInstance.exchangeRateTao().insertExchangeRate(exchangeRateEntry)).observeOn(AndroidSchedulers.mainThread())
                 .subscribeOn(Schedulers.io())
                 .subscribe(new CompletableObserver() {

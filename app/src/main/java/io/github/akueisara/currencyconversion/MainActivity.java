@@ -1,6 +1,5 @@
 package io.github.akueisara.currencyconversion;
 
-import android.arch.lifecycle.ViewModelProviders;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,10 +13,8 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.RelativeLayout;
@@ -223,7 +220,7 @@ public class MainActivity extends AppCompatActivity {
                     Gson gson = new GsonBuilder().create();
                     String quoteJsonString = gson.toJson(value.getQuotes());
                     ExchangeRateEntry exchangeRateEntry = new ExchangeRateEntry(time, value.getSource(), quoteJsonString);
-                    mDb.loadExchangeRates(MainActivity.this, value.getSource(), exchangeRateEntry);
+                    mDb.insertOrUpdateExchangeRatesAfterLoading(value.getSource(), exchangeRateEntry);
                 } else {
                     Logger.d(value.getErrorMessage().toString());
                     if(mExchangeRateList.size() == 0) {

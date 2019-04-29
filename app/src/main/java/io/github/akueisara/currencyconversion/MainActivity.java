@@ -46,8 +46,10 @@ import io.github.akueisara.currencyconversion.utils.TimeUtils;
 import io.github.akueisara.currencyconversion.utils.ViewUtils;
 import io.reactivex.Observer;
 import io.reactivex.SingleObserver;
+import io.reactivex.SingleSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
@@ -67,11 +69,10 @@ public class MainActivity extends AppCompatActivity {
     private ExchangeRateAdapter mExchangeRateAdapter;
     private Map<String, Double> mExchangeRateList;
     private String[] mCurrencyArray;
-
-    private AppDatabase mDb;
     private String mCurrentAmount = "";
-    private boolean mNetworkConnection = true;
     private Double mOldRate = 1.00;
+    private AppDatabase mDb;
+    private boolean mNetworkConnection = true;
 
     private final BroadcastReceiver mNetworkChangeReceiver = new BroadcastReceiver(){
         Context context;
@@ -286,12 +287,12 @@ public class MainActivity extends AppCompatActivity {
     private void setupCurrencyAmountEditTextListeners() {
         mCurrencyAmountEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if(hasFocus) {
-                mOldRate = getPureCurrencyNumber();
-                if(getPureCurrencyNumber() == 1) {
+                mOldRate = getPureCurrencyNumber(mCurrencyAmountEditText.getText().toString());
+                if(mOldRate == 1) {
                     mCurrencyAmountEditText.setText(getString(R.string.zero_currency_amount));
                 }
             } else {
-                if(getPureCurrencyNumber() == 0) {
+                if(getPureCurrencyNumber(mCurrencyAmountEditText.getText().toString()) == 0) {
                     mCurrencyAmountEditText.setText(getString(R.string.default_currency_amount));
                 }
             }
@@ -307,10 +308,7 @@ public class MainActivity extends AppCompatActivity {
                 if(!s.toString().equals(mCurrentAmount)){
                     mCurrencyAmountEditText.removeTextChangedListener(this);
 
-                    String cleanString = s.toString().replaceAll("[$,.]", "");
-
-                    double parsed = Double.parseDouble(cleanString);
-                    String formatted = NumberFormat.getCurrencyInstance(Locale.US).format((parsed/100)).replace("$", "");
+                    String formatted = NumberFormat.getCurrencyInstance(Locale.US).format(getPureCurrencyNumber(s.toString())).replace("$", "");
 
                     mCurrentAmount = formatted;
                     mCurrencyAmountEditText.setText(formatted);
@@ -336,8 +334,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private Double getPureCurrencyNumber() {
-        String cleanString = mCurrencyAmountEditText.getText().toString().replaceAll("[$,.]", "");
+    private Double getPureCurrencyNumber(String s) {
+        String cleanString = s.replaceAll("[$,.]", "");
         return  Double.parseDouble(cleanString) / 100;
     }
 
@@ -395,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
         mExchangeRateList = exchangeRateList;
         for (Map.Entry<String, Double> stringDoubleEntry : mExchangeRateList.entrySet()) {
             Map.Entry pair = stringDoubleEntry;
-            mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() / mOldRate * getPureCurrencyNumber());
+            mExchangeRateList.put((String) pair.getKey(), (Double) pair.getValue() / mOldRate * getPureCurrencyNumber(mCurrencyAmountEditText.getText().toString()));
         }
         mExchangeRateAdapter.setExchangeRate(mExchangeRateList);
     }
